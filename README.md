@@ -1,3 +1,6 @@
+[tool.poetry.scripts]
+dev= "todo.main:start"
+
 Import Statements and Initialization:
 import necessary modules: FastAPI, HTTPException, BaseModel, and Dict.
 created an instance of FastAPI called app.

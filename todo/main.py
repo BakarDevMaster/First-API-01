@@ -1,52 +1,76 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Dict
+from http.client import HTTPException
+from dotenv import load_dotenv
 import uvicorn
+import os
+from fastapi import FastAPI
+from typing import  Optional
+from sqlmodel import Field, Session, SQLModel, create_engine, select
+
+class Todo(SQLModel, table=True):
+    id:Optional[int ] | None = Field(default=None, primary_key=True)
+    task: str = Field(index=True)
+
+load_dotenv()
+
+sqlite_url = os.getenv('DATABASE_URL')
+
+
+engine = create_engine(sqlite_url)
+
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
 
 app = FastAPI()
 
-class Student(BaseModel):
-    id: int
-    name: str
-    age: int
-    grade: str
-
-students=[1,2,3,4,5,]
-print(students[0])
-students: Dict[int, Student] = {}
-
-@app.get("/students")
-def get_students():
-    return students
-
-@app.get("/students/{student_id}")
-def get_student(student_id: int):
-    if student_id not in students:
-        raise HTTPException(status_code=404, detail="Student not found")
-    return students[student_id]
-
-@app.post("/students")
-def create_student(student: Student):
-    if student.id in students:
-        raise HTTPException(status_code=400, detail="Student already exists")
-    students[student.id] = student
-    return student
-
-@app.put("/students/{student_id}")
-def update_student(student_id: int, student: Student):
-    if student_id not in students:
-        raise HTTPException(status_code=404, detail="Student not found")
-    students[student_id] = student
-    return student
-
-@app.delete("/students/{student_id}")
-def delete_student(student_id: int):
-    if student_id not in students:
-        raise HTTPException(status_code=404, detail="Student not found")
-    del students[student_id]
-    return {"message": "Student has been deleted successfully"}
 
 
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
+
+@app.post("/todos/")
+def create_todo(hero: Todo):
+    with Session(engine) as session:
+        session.add(hero)
+        session.commit()
+        session.refresh(hero)
+        return "todo posted"
+
+@app.get("/todos/")
+def read_todo():
+    with Session(engine) as session:
+        heroes = session.exec(select(Todo)).all()
+        return heroes
+    
+    
+@app.put("/todos/")
+def update_heroes(task:Todo):
+    with Session(engine) as session:
+        statement = select(Todo).where(Todo.id == task.id)
+        results = session.exec(statement)
+        hero = results.one()
+    
+
+        hero.task= task.task
+        session.add(hero)
+        session.commit()
+        session.refresh(hero)
+        return "todo updated"
+    
+    
+@app.delete("/todos/")
+def delete_task(task:Todo):
+    with Session(engine) as session:
+        statement = select(Todo).where(Todo.id == task.id)
+        results = session.exec(statement)
+        hero = results.one()
+        session.delete(hero)
+        session.commit()
+        return "task deleted"
+       
 
 def start():
-    uvicorn.run("todo.main:app",host="127.0.0.1", port=8080, reload=True)
+    uvicorn.run("todo.main:app", host="127.0.0.1", port=8080, reload=True)
+
+    
+ 
