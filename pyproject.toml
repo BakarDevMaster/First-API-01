@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 [tool.poetry.dependencies]
-python = { version = "^3.11", path = "python3.11" }
+python = "^3.11"
 fastapi = "^0.110.0"
 uvicorn = {extras = ["standard"], version = "^0.29.0"}
 basemodel = "^20190604.1625"
